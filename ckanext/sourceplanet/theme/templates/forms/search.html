@@ -12,19 +12,29 @@
   <py:match path="primarysidebar">
     
     <li class="widget-container boxed widget_text" py:if="h.check_access('package_create')">
-        <h3>Add a dataset</h3>
+        <h3>Add a <strong>project</strong></h3>
         <p>
-            Do you know of a dataset that should be added to ${g.site_title}?
+            Do you know of an Open Source Project that should be added to ${g.site_title}?
             <br/>
             
-            <a href="${h.url_for(controller='package', action='new', id=None)}">Register it now</a>.
+            <a href="/sourceplanet/project/new">Register it now</a>.
+        </p>
+    </li>
+
+    <li class="widget-container boxed widget_text" py:if="h.check_access('package_create')">
+        <h3>Add a <strong>product</strong></h3>
+        <p>
+            Do you know of an Open Source Product that should be added to ${g.site_title}?
+            <br/>
+
+            <a href="/sourceplanet/product/new">Register it now</a>.
         </p>
     </li>
 
     ${facet_div('tags', _('Tags'))}
     ${facet_div('res_format', _('Resource Formats'))}
-    ${facet_div('groups', _('Groups'))}
-
+    ${facet_div('groups', _('Organizations'))}
+    <br />
     <li class="widget-container widget_text">
         <h2>Other access</h2>
 <?python
@@ -52,9 +62,6 @@
       </py:if>
       <py:if test="request.params">      
         <h4 i18n:msg="item_count"><strong>${c.page.item_count}</strong> datasets found</h4>            
-     </py:if>
-      <py:if test="c.page.item_count == 0 and request.params">
-        <p i18n:msg="">Would you like to <a href="${h.url_for(action='new', id=None)}">create a new dataset?</a></p>
       </py:if>
       ${package_list_from_dict(c.page.items)}
       ${c.page.pager(q=c.q)}

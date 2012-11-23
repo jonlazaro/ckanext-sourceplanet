@@ -9,7 +9,7 @@ from ckan.lib.navl import dictization_functions
 from ckan.lib.navl.validators import ignore_missing, not_empty
 from ckan import authz
 from ckan import logic
-from pylons import config, request
+from pylons import config, request, response
 import logic.schema
 from ckan.logic.converters import convert_to_extras, convert_from_extras
 
@@ -29,6 +29,12 @@ class SourceplanetPlugin(SingletonPlugin):
             rootdir, 'ckanext', 'sourceplanet', 'theme', 'templates')
         config['extra_template_paths'] = ','.join(
             [template_dir, config.get('extra_template_paths', '')])
+	config['extra_public_paths'] = os.path.join(rootdir, 'ckanext', 'sourceplanet', 'theme', 'public')
+	config['licenses_group_url'] = 'http://dev.morelab.deusto.es/sourceplanet/osi_list.json'
+	#config['ckan.site_logo'] = os.path.join(rootdir, 'ckanext', 'sourceplanet', 'theme', 'public', 'img', 'sourceplanet.png')
+	config['ckan.site_logo'] = 'http://dev.morelab.deusto.es/sourceplanet/img/sourceplanet.png'
+	config['ckan.site_description'] = 'SourcePlanet'
+	config['ckan.site_title'] = 'SourcePlanet'
 
     def package_form(self):
         return 'forms/new_package_form.html'
@@ -79,13 +85,13 @@ class SourceplanetPlugin(SingletonPlugin):
                 c.auth_for_change_state = True
             except logic.NotAuthorized:
                 c.auth_for_change_state = False
-
+	
         # SourcePlanet customization
         route = request.environ.get('CKAN_CURRENT_URL')
         c.dataset_type = route.split('/')[1]
 
-        def form_to_db_schema(self):
-            schema = package_form_schema()
+    def form_to_db_schema(self):
+        schema = package_form_schema()
 
         '''
             # Configuration to get working the extension (not needed at this time)
@@ -115,7 +121,9 @@ class SourceplanetPlugin(SingletonPlugin):
 
         # Configuration to get working the extension
         schema.update({
-            'id': [ignore_missing, unicode]
+            'id': [ignore_missing, unicode],
+	    'isopen': [ignore_missing],
+	    'resources': [ignore_missing]
         })
 
         schema['groups'].update({
@@ -129,9 +137,12 @@ class SourceplanetPlugin(SingletonPlugin):
             'dataset_type': [ignore_missing]
         })
 
+	log.info("vamossssss")
+	
         return schema
 
     def check_data_dict(self, data_dict, schema=None):
+	log.info("holaaaaa")
         # Configuration to get working the extension
         surplus_keys_schema = ['__extras', '__junk', 'state', 'groups',
                                'extras_validation', 'save', 'return_to',

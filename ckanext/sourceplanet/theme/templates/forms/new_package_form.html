@@ -95,7 +95,7 @@
   </div>
 
   <div class="control-group groups-field">
-    <label class="control-label">Groups</label>
+    <label class="control-label">Organizations</label>
     <div class="controls">
       <py:with vars="groups=data.get('groups',[])">
       <strong py:if="len(groups)>0">Member of:</strong>
@@ -111,8 +111,8 @@
         </div>
       </py:for>
 
-      <strong>Add to:</strong>
-      <select py:if="c.groups_available" id="groups__${len(groups)}__id" name="groups__${len(groups)}__id">
+      <strong py:if="len(groups)==0">Add to:</strong>
+      <select py:if="c.groups_available and len(groups)==0" id="groups__${len(groups)}__id" name="groups__${len(groups)}__id">
         <option selected="selected" value="">(None)</option>
         <py:for each="group in c.groups_available">
         <option value="${group['id']}" >${group['name']}</option>
