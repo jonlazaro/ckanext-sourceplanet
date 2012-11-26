@@ -28,6 +28,6 @@ setup(
     [ckan.plugins]
     # Add plugins here, eg
     # myplugin=ckanext.sourceplanet:PluginClass
-    sourceplanet=ckanext.sourceplanet.plugin:SourceplanetPlugin
+    sourceplanet=ckanext.sourceplanet.plugin:SourceplanetDatasetForm
     """,
 )

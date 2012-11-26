@@ -12,12 +12,12 @@ from ckan import logic
 from pylons import config, request, response
 import logic.schema
 from ckan.logic.converters import convert_to_extras, convert_from_extras
+from ckan.lib.plugins import DefaultDatasetForm
 
 log = getLogger(__name__)
 dataset_types = ['product', 'project']
 
-
-class SourceplanetPlugin(SingletonPlugin):
+class SourceplanetDatasetForm(SingletonPlugin, DefaultDatasetForm):
     implements(IDatasetForm, inherit=True)
     implements(IConfigurer, inherit=True)
     implements(IRoutes, inherit=True)
@@ -31,7 +31,6 @@ class SourceplanetPlugin(SingletonPlugin):
             [template_dir, config.get('extra_template_paths', '')])
 	config['extra_public_paths'] = os.path.join(rootdir, 'ckanext', 'sourceplanet', 'theme', 'public')
 	config['licenses_group_url'] = 'http://dev.morelab.deusto.es/sourceplanet/osi_list.json'
-	#config['ckan.site_logo'] = os.path.join(rootdir, 'ckanext', 'sourceplanet', 'theme', 'public', 'img', 'sourceplanet.png')
 	config['ckan.site_logo'] = 'http://dev.morelab.deusto.es/sourceplanet/img/sourceplanet.png'
 	config['ckan.site_description'] = 'SourcePlanet'
 	config['ckan.site_title'] = 'SourcePlanet'
@@ -61,53 +60,14 @@ class SourceplanetPlugin(SingletonPlugin):
         return dataset_types
 
     def setup_template_variables(self, context, data_dict=None):
-        log.info("Templaterlll!!!")
-        # Configuration to get working the extension
-        authz_fn = logic.get_action('group_list_authz')
-        c.groups_authz = authz_fn(context, data_dict)
-        data_dict.update({'available_only': True})
+	DefaultDatasetForm.setup_template_variables(self, context, data_dict)
 
-        c.groups_available = authz_fn(context, data_dict)
-
-        c.licences = [('', '')] + base.model.Package.get_license_options()
-        c.is_sysadmin = authz.Authorizer().is_sysadmin(c.user)
-
-        if c.pkg:
-            c.related_count = c.pkg.related_count
-
-        context_pkg = context.get('package', None)
-        pkg = context_pkg or c.pkg
-        if pkg:
-            try:
-                if not context_pkg:
-                    context['package'] = pkg
-                logic.check_access('package_change_state', context)
-                c.auth_for_change_state = True
-            except logic.NotAuthorized:
-                c.auth_for_change_state = False
-	
         # SourcePlanet customization
         route = request.environ.get('CKAN_CURRENT_URL')
         c.dataset_type = route.split('/')[1]
 
     def form_to_db_schema(self):
-        schema = package_form_schema()
-
-        '''
-            # Configuration to get working the extension (not needed at this time)
-            schema = options.get('context', {}).get('schema', None)
-            if schema:
-                return schema
-
-            if options.get('api'):
-                if options.get('type') == 'create':
-                    return self.form_to_db_schema_api_create()
-                else:
-                    assert options.get('type') == 'update'
-                    return self.form_to_db_schema_api_update()
-            else:
-                return self.form_to_db_schema()
-        '''
+	schema = DefaultDatasetForm.form_to_db_schema(self)
 
         # SourcePlanet customization
         schema.update({
@@ -123,7 +83,6 @@ class SourceplanetPlugin(SingletonPlugin):
         schema.update({
             'id': [ignore_missing, unicode],
 	    'isopen': [ignore_missing],
-	    'resources': [ignore_missing]
         })
 
         schema['groups'].update({
@@ -140,23 +99,6 @@ class SourceplanetPlugin(SingletonPlugin):
 	log.info("vamossssss")
 	
         return schema
-
-    def check_data_dict(self, data_dict, schema=None):
-	log.info("holaaaaa")
-        # Configuration to get working the extension
-        surplus_keys_schema = ['__extras', '__junk', 'state', 'groups',
-                               'extras_validation', 'save', 'return_to',
-                               'resources', 'type']
-
-        if not schema:
-            schema = self.form_to_db_schema()
-        schema_keys = schema.keys()
-        keys_in_schema = set(schema_keys) - set(surplus_keys_schema)
-
-        missing_keys = keys_in_schema - set(data_dict.keys())
-        if missing_keys:
-            log.info('Incorrect form fields posted, missing %s' % missing_keys)
-            raise dictization_functions.DataError(data_dict)
 
     def before_map(self, map):
         # Configuration to get working the extension
