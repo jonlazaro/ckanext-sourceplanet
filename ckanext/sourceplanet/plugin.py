@@ -25,13 +25,23 @@ class SourceplanetDatasetForm(SingletonPlugin, DefaultDatasetForm):
     def update_config(self, config):
         here = os.path.dirname(__file__)
         rootdir = os.path.dirname(os.path.dirname(here))
+
+	#New template dir
         template_dir = os.path.join(
             rootdir, 'ckanext', 'sourceplanet', 'theme', 'templates')
         config['extra_template_paths'] = ','.join(
             [template_dir, config.get('extra_template_paths', '')])
-	config['extra_public_paths'] = os.path.join(rootdir, 'ckanext', 'sourceplanet', 'theme', 'public')
-	config['licenses_group_url'] = 'http://dev.morelab.deusto.es/sourceplanet/osi_list.json'
-	config['ckan.site_logo'] = 'http://dev.morelab.deusto.es/sourceplanet/img/sourceplanet.png'
+
+	#New public dir
+	public_dir = os.path.join(rootdir, 'ckanext', 'sourceplanet', 'theme', 'public')
+        config['extra_public_paths'] = ','.join(
+            [public_dir, config.get('extra_public_paths', '')])
+
+	#OSI licenses added
+	config['licenses_group_url'] = config['ckan.site_url'] + 'licenses/osi_list.json'
+
+	#Basic customization
+	config['ckan.site_logo'] = '/img/sourceplanet.png'
 	config['ckan.site_description'] = 'SourcePlanet'
 	config['ckan.site_title'] = 'SourcePlanet'
 
