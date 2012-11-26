@@ -38,7 +38,7 @@ class SourceplanetDatasetForm(SingletonPlugin, DefaultDatasetForm):
             [public_dir, config.get('extra_public_paths', '')])
 
 	#OSI licenses added
-	config['licenses_group_url'] = config['ckan.site_url'] + 'licenses/osi_list.json'
+	config['licenses_group_url'] = 'file://' + os.path.join(public_dir, 'licenses', 'osi_list.json')
 
 	#Basic customization
 	config['ckan.site_logo'] = '/img/sourceplanet.png'
@@ -111,6 +111,8 @@ class SourceplanetDatasetForm(SingletonPlugin, DefaultDatasetForm):
         return schema
 
     def before_map(self, map):
+	map.connect('/licenses/osi_list.json', _static=True)
+
         # Configuration to get working the extension
         for type in dataset_types:
             with map.submapper(controller='package') as m:
