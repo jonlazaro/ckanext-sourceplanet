@@ -26,8 +26,9 @@ setup(
     entry_points=
     """
     [ckan.plugins]
-    # Add plugins here, eg
-    # myplugin=ckanext.sourceplanet:PluginClass
     sourceplanet=ckanext.sourceplanet.plugin:SourceplanetDatasetForm
+
+    #[ckan.forms]
+    #example_form=ckanext.sourceplanet.package_form:get_example_fieldset
     """,
 )

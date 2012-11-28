@@ -1,0 +1,488 @@
+import os
+from logging import getLogger
+from ckan.plugins import implements, SingletonPlugin
+from ckan.plugins import IDatasetForm, IConfigurer, IRoutes
+from ckan.logic.schema import package_form_schema
+from ckan.lib.base import c, model
+from ckan.lib import base
+from ckan.lib.navl import dictization_functions
+from ckan.lib.navl.validators import ignore_missing, not_empty, ignore
+from ckan import authz
+from ckan import logic
+from pylons import config, request, response
+import logic.schema
+from ckan.logic.converters import convert_to_extras, convert_from_extras
+from ckan.lib.plugins import DefaultDatasetForm
+
+
+from ckan.lib.navl.dictization_functions import unflatten
+from ckan.logic import (tuplize_dict,
+                        clean_dict,
+                        parse_params,
+                        flatten_to_string_key,
+			get_action)
+
+
+
+log = getLogger(__name__)
+
+#Evaluation indicators
+community_dev = {
+    'Technology_roadmap': [ignore_missing],
+    'To-do': [ignore_missing],
+    'Readme': [ignore_missing],
+    'Software_development_methodology': [ignore_missing],
+    'Software_documentation': [ignore_missing],
+    'Version_control_system': [ignore_missing],
+    'Debugging': [ignore_missing],
+    'Software_testing': [ignore_missing],
+    'Source_code_repository': [ignore_missing],
+}
+
+community = {
+    'Organizational_structure': [ignore_missing],
+    'Free_software_community': [ignore_missing],
+    'Internet_forum': [ignore_missing],
+    'Blog': [ignore_missing],
+    'Electronic_mailing_list': [ignore_missing],
+    'Web_syndication': [ignore_missing],
+}
+
+product = {
+    'Innovation': [ignore_missing],
+    'Software_license': [ignore_missing],
+    'Product_certification': [ignore_missing],
+    'Internationalization_and_localization': [ignore_missing],
+    'Demo_(computer_programming)': [ignore_missing],
+}
+
+market = {
+    'Software_license': [ignore_missing],
+    'Product_certification': [ignore_missing],
+    'Internationalization_and_localization': [ignore_missing],
+    'Demo_(computer_programming)': [ignore_missing],
+    'Internationalization': [ignore_missing],
+}
+
+org_service = {
+    'Customer_satisfaction': [ignore_missing],
+    'Help_desk': [ignore_missing],
+    'Bug_tracking_system': [ignore_missing],
+    'Call_centre': [ignore_missing],
+    '24/7': [ignore_missing],
+    'Service-level_agreement': [ignore_missing],
+    'Partnership': [ignore_missing],
+    'Software_maintenance': [ignore_missing],
+}
+
+training = {
+    'Customer_service_training': [ignore_missing],
+    'Technical_support': [ignore_missing],
+    'Customer_support': [ignore_missing],
+    'Virtual_learning_environment': [ignore_missing],
+}
+
+docs = {
+    'User_(computing)': [ignore_missing],
+    'Digital_library': [ignore_missing],
+    'Locale': [ignore_missing],
+    'FAQ': [ignore_missing],
+}
+
+
+
+class SourceplanetPlugin(SingletonPlugin):
+    implements(IConfigurer, inherit=True)
+
+    def update_config(self, config):
+        here = os.path.dirname(__file__)
+        rootdir = os.path.dirname(os.path.dirname(here))
+
+	#New template dir
+        template_dir = os.path.join(
+            rootdir, 'ckanext', 'sourceplanet', 'theme', 'templates')
+        config['extra_template_paths'] = ','.join(
+            [template_dir, config.get('extra_template_paths', '')])
+
+	#New public dir
+	public_dir = os.path.join(rootdir, 'ckanext', 'sourceplanet', 'theme', 'public')
+        config['extra_public_paths'] = ','.join(
+            [public_dir, config.get('extra_public_paths', '')])
+
+	#OSI licenses added
+	config['licenses_group_url'] = 'file://' + os.path.join(public_dir, 'licenses', 'osi_list.json')
+
+	#Basic customization
+	config['ckan.site_logo'] = '/img/sourceplanet.png'
+	config['ckan.site_description'] = 'SourcePlanet'
+	config['ckan.site_title'] = 'SourcePlanet'
+
+
+
+class SourceplanetProjectForm(SingletonPlugin, DefaultDatasetForm):
+    implements(IDatasetForm, inherit=True)
+    implements(IRoutes, inherit=True)
+
+    def package_form(self):
+        return 'forms/new_package_form.html'
+
+    def new_template(self):
+        return 'forms/new.html'
+
+    def comments_template(self):
+        return 'forms/comments.html'
+
+    def search_template(self):
+        return 'forms/search.html'
+
+    def read_template(self):
+        return 'forms/read.html'
+
+    def history_template(self):
+        return 'forms/history.html'
+
+    def is_fallback(self):
+        return False
+
+    def package_types(self):
+	return ['project']
+
+    def setup_template_variables(self, context, data_dict=None):
+	DefaultDatasetForm.setup_template_variables(self, context, data_dict)
+
+        # SourcePlanet customization
+	c.dataset_type = "project"
+
+    def form_to_db_schema(self):
+	schema = DefaultDatasetForm.form_to_db_schema(self)
+
+        # SourcePlanet customization
+        schema.update({
+            'dataset_type': [ignore_missing, unicode],
+        })
+
+	evaluation = {}
+
+	evaluation = {
+	    'community_dev': community_dev,
+	    'community': community,
+	}
+
+	schema.update({
+	    'evaluation': evaluation,      
+        })
+
+        return schema
+
+    def check_data_dict(self, data_dict):
+	data_dict['type'] = data_dict['dataset_type']
+	return
+
+    def db_to_form_schema(self):
+        schema = package_form_schema()
+
+        # Configuration to get working the extension
+        schema.update({
+            'id': [ignore_missing, unicode],
+	    'isopen': [ignore_missing],
+        })
+
+        schema['groups'].update({
+            'name': [not_empty, unicode],
+            'title': [ignore_missing],
+            'capacity': [ignore_missing, unicode]
+        })
+
+        # SourcePlanet customization
+        schema.update({
+            'dataset_type': [ignore_missing],
+        })
+
+        evaluation = {}
+
+        evaluation = {
+            'community_dev': community_dev,
+            'community': community,
+        }
+
+        schema.update({
+            'evaluation': evaluation,
+        })
+	
+        return schema
+
+    def before_map(self, map):
+        # Configuration to get working the extension
+        for type in ['project']:
+            with map.submapper(controller='package') as m:
+                m.connect('/%s' % type, action='search')
+                m.connect('/%s/{action}' % type,
+                          requirements=dict(action='|'.join([
+                                                            'list',
+                                                            'new',
+                                                            'autocomplete',
+                                                            'search'
+                                                            ]))
+                          )
+
+                m.connect(
+                    '/%s/{action}/{id}/{revision}' % type, action='read_ajax',
+                    requirements=dict(action='|'.join([
+                    'read',
+                    'edit',
+                    'authz',
+                    'history',
+                    ]))
+                )
+
+                m.connect('/%s/{action}/{id}' % type,
+                          requirements=dict(action='|'.join([
+                                                            'edit',
+                                                            'new_metadata',
+                                                            'new_resource',
+                                                            'authz',
+                                                            'history',
+                                                            'read_ajax',
+                                                            'history_ajax',
+                                                            'followers',
+                                                            'follow',
+                                                            'unfollow',
+                                                            'delete',
+                                                            'api_data',
+                                                            'editresources',
+                                                            ]))
+                          )
+                m.connect('/%s/{id}.{format}' % type, action='read')
+                m.connect('/%s/{id}' % type, action='read')
+                m.connect('/%s/{id}/resource/{resource_id}' % type,
+                          action='resource_read')
+                m.connect('/%s/{id}/resource_delete/{resource_id}' % type,
+                          action='resource_delete')
+                m.connect('/%s/{id}/resource_edit/{resource_id}' % type,
+                          action='resource_edit')
+                m.connect('/%s/{id}/resource/{resource_id}/download' % type,
+                          action='resource_download')
+                m.connect('/%s/{id}/resource/{resource_id}/embed' % type,
+                          action='resource_embedded_dataviewer')
+                m.connect('/%s/{id}/resource/{resource_id}/viewer' % type,
+                          action='resource_embedded_dataviewer', width="960", height="800")
+                m.connect(
+                    '/%s/{id}/resource/{resource_id}/preview/{preview_type}' % type,
+                    action='resource_datapreview')
+
+            with map.submapper(controller='related') as m:
+                m.connect('related_new',
+                          '/%s/{id}/related/new' % type, action='new')
+                m.connect(
+                    'related_edit', '/%s/{id}/related/edit/{related_id}' % type,
+                    action='edit')
+                m.connect(
+                    'related_delete', '/%s/{id}/related/delete/{related_id}' % type,
+                    action='delete')
+                m.connect(
+                    'related_list', '/%s/{id}/related' % type, action='list')
+
+            with map.submapper(controller='api', path_prefix='/api{ver:/1|/2|}', ver='/1') as m:
+                m.connect(
+                    '/util/%s/autocomplete' % type, action='dataset_autocomplete',
+                    conditions=dict(method=['GET']))
+                m.connect(
+                    '/util/%s/munge_name' % type, action='munge_package_name')
+                m.connect('/util/%s/munge_title_to_name' % type,
+                          action='munge_title_to_package_name')
+
+            if config.get('ckan.datastore.enabled', False):
+                with map.submapper(controller='datastore') as m:
+                    m.connect('datastore_read_shortcut',
+                              '/%s/{dataset}/resource/{id}/api{url:(/.*)?}' % type,
+                              action='read', url='', conditions=dict(method=['GET']))
+                    m.connect('datastore_write_shortcut',
+                              '/%s/{dataset}/resource/{id}/api{url:(/.*)?}' % type,
+                              action='write', url='', conditions=dict(method=['PUT', 'POST', 'DELETE']))
+
+        return map
+
+
+
+class SourceplanetProductForm(SingletonPlugin, DefaultDatasetForm):
+    implements(IDatasetForm, inherit=True)
+    implements(IRoutes, inherit=True)
+
+    def package_form(self):
+        return 'forms/new_package_form.html'
+
+    def new_template(self):
+        return 'forms/new.html'
+
+    def comments_template(self):
+        return 'forms/comments.html'
+
+    def search_template(self):
+        return 'forms/search.html'
+
+    def read_template(self):
+        return 'forms/read.html'
+
+    def history_template(self):
+        return 'forms/history.html'
+
+    def is_fallback(self):
+        return False
+
+    def package_types(self):
+	log.info("buuuuuuuuuuuuuu")
+	return ['product']
+
+    def setup_template_variables(self, context, data_dict=None):
+	DefaultDatasetForm.setup_template_variables(self, context, data_dict)
+
+        # SourcePlanet customization
+        c.dataset_type = "product"
+
+    def form_to_db_schema(self):
+	schema = DefaultDatasetForm.form_to_db_schema(self)
+
+        # SourcePlanet customization
+        schema.update({
+            'dataset_type': [ignore_missing, unicode],
+        })
+
+	evaluation = {}
+
+        evaluation = {
+            'product': product,
+            'market': market,
+        }
+
+	schema.update({
+	    'evaluation': evaluation,      
+        })
+
+        return schema
+
+    def check_data_dict(self, data_dict):
+	data_dict['type'] = data_dict['dataset_type']
+	return
+
+    def db_to_form_schema(self):
+        schema = package_form_schema()
+
+        # Configuration to get working the extension
+        schema.update({
+            'id': [ignore_missing, unicode],
+	    'isopen': [ignore_missing],
+        })
+
+        schema['groups'].update({
+            'name': [not_empty, unicode],
+            'title': [ignore_missing],
+            'capacity': [ignore_missing, unicode]
+        })
+
+        # SourcePlanet customization
+        schema.update({
+            'dataset_type': [ignore_missing],
+        })
+
+        evaluation = {
+            'product': product,
+            'market': market,
+        }
+
+        schema.update({
+            'evaluation': evaluation,
+        })
+	
+        return schema
+
+    def before_map(self, map):
+        # Configuration to get working the extension
+        for type in ['product']:
+            with map.submapper(controller='package') as m:
+                m.connect('/%s' % type, action='search')
+                m.connect('/%s/{action}' % type,
+                          requirements=dict(action='|'.join([
+                                                            'list',
+                                                            'new',
+                                                            'autocomplete',
+                                                            'search'
+                                                            ]))
+                          )
+
+                m.connect(
+                    '/%s/{action}/{id}/{revision}' % type, action='read_ajax',
+                    requirements=dict(action='|'.join([
+                    'read',
+                    'edit',
+                    'authz',
+                    'history',
+                    ]))
+                )
+
+                m.connect('/%s/{action}/{id}' % type,
+                          requirements=dict(action='|'.join([
+                                                            'edit',
+                                                            'new_metadata',
+                                                            'new_resource',
+                                                            'authz',
+                                                            'history',
+                                                            'read_ajax',
+                                                            'history_ajax',
+                                                            'followers',
+                                                            'follow',
+                                                            'unfollow',
+                                                            'delete',
+                                                            'api_data',
+                                                            'editresources',
+                                                            ]))
+                          )
+                m.connect('/%s/{id}.{format}' % type, action='read')
+                m.connect('/%s/{id}' % type, action='read')
+                m.connect('/%s/{id}/resource/{resource_id}' % type,
+                          action='resource_read')
+                m.connect('/%s/{id}/resource_delete/{resource_id}' % type,
+                          action='resource_delete')
+                m.connect('/%s/{id}/resource_edit/{resource_id}' % type,
+                          action='resource_edit')
+                m.connect('/%s/{id}/resource/{resource_id}/download' % type,
+                          action='resource_download')
+                m.connect('/%s/{id}/resource/{resource_id}/embed' % type,
+                          action='resource_embedded_dataviewer')
+                m.connect('/%s/{id}/resource/{resource_id}/viewer' % type,
+                          action='resource_embedded_dataviewer', width="960", height="800")
+                m.connect(
+                    '/%s/{id}/resource/{resource_id}/preview/{preview_type}' % type,
+                    action='resource_datapreview')
+
+            with map.submapper(controller='related') as m:
+                m.connect('related_new',
+                          '/%s/{id}/related/new' % type, action='new')
+                m.connect(
+                    'related_edit', '/%s/{id}/related/edit/{related_id}' % type,
+                    action='edit')
+                m.connect(
+                    'related_delete', '/%s/{id}/related/delete/{related_id}' % type,
+                    action='delete')
+                m.connect(
+                    'related_list', '/%s/{id}/related' % type, action='list')
+
+            with map.submapper(controller='api', path_prefix='/api{ver:/1|/2|}', ver='/1') as m:
+                m.connect(
+                    '/util/%s/autocomplete' % type, action='dataset_autocomplete',
+                    conditions=dict(method=['GET']))
+                m.connect(
+                    '/util/%s/munge_name' % type, action='munge_package_name')
+                m.connect('/util/%s/munge_title_to_name' % type,
+                          action='munge_title_to_package_name')
+
+            if config.get('ckan.datastore.enabled', False):
+                with map.submapper(controller='datastore') as m:
+                    m.connect('datastore_read_shortcut',
+                              '/%s/{dataset}/resource/{id}/api{url:(/.*)?}' % type,
+                              action='read', url='', conditions=dict(method=['GET']))
+                    m.connect('datastore_write_shortcut',
+                              '/%s/{dataset}/resource/{id}/api{url:(/.*)?}' % type,
+                              action='write', url='', conditions=dict(method=['PUT', 'POST', 'DELETE']))
+
+        return map
+

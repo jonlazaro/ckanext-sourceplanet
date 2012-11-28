@@ -12,10 +12,14 @@
   py:strip="">
 
   <py:def function="page_title">${c.pkg_dict.get('title', c.pkg_dict['name'])}
-  - Datasets</py:def>
+  - ${c.pkg.type}</py:def>
 
   <py:def function="page_heading" property="dc:title">
-    ${c.pkg_dict['title']}
+    ${c.pkg_dict['title']} 
+            <a href="${h.url_for('/' + str(c.pkg.type) + '/' + str(c.pkg.name) + '.rdf')}" title="RDF description" target="_blank">
+              <img class="open-data" src="http://scm-l3.technorati.com/10/11/30/22623/RDFicon.png" alt="[RDF]" width="25" />
+            </a>
+
   </py:def>
 
   <py:match path="primarysidebar">

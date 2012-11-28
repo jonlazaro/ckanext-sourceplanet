@@ -38,6 +38,70 @@ evaluation_model = {
     'value': [ignore_missing], 
 }
 
+community_dev = {
+    'Technology_roadmap': [ignore_missing],
+    'To-do': [ignore_missing],
+    'Readme': [ignore_missing],
+    'Software_development_methodology': [ignore_missing],
+    'Software_documentation': [ignore_missing],
+    'Version_control_system': [ignore_missing],
+    'Debugging': [ignore_missing],
+    'Software_testing': [ignore_missing],
+    'Source_code_repository': [ignore_missing],
+}
+
+community = {
+    'Organizational_structure': [ignore_missing],
+    'Free_software_community': [ignore_missing],
+    'Internet_forum': [ignore_missing],
+    'Blog': [ignore_missing],
+    'Electronic_mailing_list': [ignore_missing],
+    'Web_syndication': [ignore_missing],
+}
+
+product = {
+    'Innovation': [ignore_missing],
+    'Software_license': [ignore_missing],
+    'Product_certification': [ignore_missing],
+    'Internationalization_and_localization': [ignore_missing],
+    'Demo_(computer_programming)': [ignore_missing],
+}
+
+market = {
+    'Software_license': [ignore_missing],
+    'Product_certification': [ignore_missing],
+    'Internationalization_and_localization': [ignore_missing],
+    'Demo_(computer_programming)': [ignore_missing],
+    'Internationalization': [ignore_missing],
+}
+
+org_service = {
+    'Customer_satisfaction': [ignore_missing],
+    'Help_desk': [ignore_missing],
+    'Bug_tracking_system': [ignore_missing],
+    'Call_centre': [ignore_missing],
+    '24/7': [ignore_missing],
+    'Service-level_agreement': [ignore_missing],
+    'Partnership': [ignore_missing],
+    'Software_maintenance': [ignore_missing],
+}
+
+training = {
+    'Customer_service_training': [ignore_missing],
+    'Technical_support': [ignore_missing],
+    'Customer_support': [ignore_missing],
+    'Virtual_learning_environment': [ignore_missing],
+}
+
+docs = {
+    'User_(computing)': [ignore_missing],
+    'Digital_library': [ignore_missing],
+    'Locale': [ignore_missing],
+    'FAQ': [ignore_missing],
+}
+
+
+
 class SourceplanetDatasetForm(SingletonPlugin, DefaultDatasetForm):
     implements(IDatasetForm, inherit=True)
     implements(IConfigurer, inherit=True)
@@ -63,7 +127,7 @@ class SourceplanetDatasetForm(SingletonPlugin, DefaultDatasetForm):
 
 	#Basic customization
 	config['ckan.site_logo'] = '/img/sourceplanet.png'
-	config['ckan.site_description'] = 'Semantic Planet for Open Source'
+	config['ckan.site_description'] = 'SourcePlanet'
 	config['ckan.site_title'] = 'SourcePlanet'
 
     def package_form(self):
@@ -97,25 +161,60 @@ class SourceplanetDatasetForm(SingletonPlugin, DefaultDatasetForm):
         route = request.environ.get('CKAN_CURRENT_URL')
         c.dataset_type = route.split('/')[1]
 
-	if 'evaluations' not in data_dict.keys(): #not c.pkg:
-	    eval_list = []
-            for eval in load_data_model():
-                if eval['dataset_type'] == route.split('/')[1]:
-                    eval_list.append(eval)
-
-            c.evaluations = eval_list
-	else:
-	    c.evaluations = data_dict['evaluations']
-
     def form_to_db_schema(self):
 	schema = DefaultDatasetForm.form_to_db_schema(self)
 
+	#data_dict = clean_dict(unflatten(
+        #        tuplize_dict(parse_params(request.POST))))
+
+	#dataset_type = data_dict['dataset_type']
+
+        # SourcePlanet customization
         schema.update({
             'dataset_type': [ignore_missing, unicode],
-	    'evaluations': evaluation_model,
         })
 
-	return schema
+	'''evaluation = {}
+
+	if dataset_type == 'project':
+	    evaluation = {
+		'community_dev': community_dev,
+		'community': community,
+	    }
+	elif dataset_type == 'product':
+            evaluation = {
+                'product': product,
+                'market': market,
+            }
+
+	for cats in evaluation.values():
+	    for key in cats.keys():
+		cats[key].append(convert_to_extras)
+
+	schema.update({
+	    'evaluation': evaluation,
+        })
+
+	schema.update(evaluation)'''
+	
+	schema.update({'evaluations': evaluation_model})
+
+	#log.info(schema)
+
+        return schema
+
+    def check_data_dict(self, data_dict):
+	if 'evaluations' not in data_dict.keys():
+	    data_dict['evaluations'] = []
+	data_dict['type'] = data_dict['dataset_type']
+
+	for eval in load_data_model():
+	    if eval['dataset_type'] == data_dict['dataset_type']:
+		data_dict['evaluations'].append(eval)
+
+	DefaultDatasetForm.check_data_dict(self, data_dict)
+
+	#log.info(data_dict)
 
     def db_to_form_schema(self):
         schema = package_form_schema()
@@ -123,7 +222,7 @@ class SourceplanetDatasetForm(SingletonPlugin, DefaultDatasetForm):
         # Configuration to get working the extension
         schema.update({
             'id': [ignore_missing, unicode],
-            'isopen': [ignore_missing],
+	    'isopen': [ignore_missing],
         })
 
         schema['groups'].update({
@@ -135,15 +234,38 @@ class SourceplanetDatasetForm(SingletonPlugin, DefaultDatasetForm):
         # SourcePlanet customization
         schema.update({
             'dataset_type': [ignore_missing],
-            'evaluations': evaluation_model,
         })
 
+        #route = request.environ.get('CKAN_CURRENT_URL')
+        #dataset_type = route.split('/')[1]
+
+        '''evaluation = {}
+
+        if dataset_type == 'project':
+            evaluation = {
+                'community_dev': community_dev,
+                'community': community,
+            }
+        elif dataset_type == 'product':
+            evaluation = {
+                'product': product,
+                'market': market,
+            }
+
+        for cats in evaluation.values():
+            for key in cats.keys():
+                cats[key].append(convert_from_extras)
+
+        schema.update({
+            'evaluation': evaluation,
+        })'''
+	
+	#schema.update(evaluation)
+	#schema.update({'evaluations': evaluation_model})
+
+	#log.info(schema)
+
         return schema
-
-    def check_data_dict(self, data_dict):
-	data_dict['type'] = data_dict['dataset_type']
-
-	DefaultDatasetForm.check_data_dict(self, data_dict)
 
     def before_map(self, map):
 	map.connect('/licenses/osi_list.json', _static=True)

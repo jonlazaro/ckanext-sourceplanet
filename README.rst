@@ -11,10 +11,11 @@ The aim of SourcePlanet project is using CKAN for managing Open Source Software 
 - Organizations / Companies (organization)
 
 As CKAN Dataset/Package model is basically based on project-like models, SourcePlanet uses that entity for "Project"s and "Product"s (with some modifications).
-"Organization"s support is based on ckanext-organizations extensions provided by CKAN by default (it only needs to activate by adding it in the configuration file)
+"Organization"s support is based on ckanext-organizations extensions provided by CKAN by default.
 
 This extension provides CKAN customization for SourcePlanet project with functionalities like:
-- New entitites project and product instead of dataset/package.
+- New entitites project and product instead of dataset entity.
 - New forms for projects and products.
 - Quality related info in project and producs.
 - New interface according to SourcePlanet needs.
+- Modified RDF descriptions adapted to software project descriptions (using DOAP ontology).

@@ -61,7 +61,7 @@
           </span>
         </div>
         <a href="${h.url('home')}">
-          <img width="64" src="${h.url_for_static(g.site_logo)}" alt="${g.site_title} Logo" title="${g.site_title} Logo" id="logo" />
+          <img width="90" src="${h.url_for_static(g.site_logo)}" alt="${g.site_title} Logo" title="${g.site_title} Logo" id="logo" />
         </a>
         <div id="site-name">
           <a href="${h.url('home')}">${g.site_title} &mdash; ${g.site_description}</a>
@@ -189,6 +189,12 @@
           <h3 class="widget-title">Languages</h3>
           <div class="textwidget">
             <ul>
+		<li>
+              <a href="/sourceplanet/">
+                  Euskera
+                </a>
+              </li>
+
 <?python
   current_url = request.environ['CKAN_CURRENT_URL']
 ?>

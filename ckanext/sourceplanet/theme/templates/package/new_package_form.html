@@ -31,13 +31,6 @@
 </ul>
 </div>
 
-<!--fieldset >
-        <input id="Technology_roadmap" name="Technology_roadmap" type="hidden" />
-        <input id="To-do" name="To-do" type="hidden" />
-        <input id="Readme" name="Readme" type="hidden" />
-        <input id="Software_development_methodology" name="Software_development_methodology" type="hidden" />
-</fieldset-->
-
 <fieldset class="tab-pane fade in active" id="basic-information">
 
   <!-- SOURCEPLANET -->
@@ -134,7 +127,7 @@
     <label class="control-label">Tags</label>
     <div class="controls">
       <input class="long autocomplete-tag" id="tag_string" name="tag_string" size="60" type="text"
-               value="${data.get('tag_string') or ', '.join([tag['name'] for tag in data.get('tags', []) if not tag.get('vocabulary_id')])}" />
+               value="${c.dataset_type + (data.get('tag_string') or ', '.join([tag['name'] for tag in data.get('tags', []) if not tag.get('vocabulary_id')]))}" />
       <p i18n:msg="">Comma-separated terms that may link this dataset to similar ones. For more information on conventions, see <a href="http://wiki.ckan.org/Managing_Datasets#Tag_Conventions">this wiki page</a>.</p>
       <p>e.g. pollution, rivers, water quality</p>
       <p class="field_error" py:if="errors.get('tag_string', '')">${errors.get('tag_string', '')}</p>
@@ -290,6 +283,23 @@
       </span>
     </dd>
   </dl>
+</fieldset>
+
+<fieldset class="tab-pane fade" id='evaluation'>
+  <py:with vars="evals = data.get('evaluations') or c.evaluations">
+    <py:for each="num, eval in enumerate(evals)">
+	  <div class="control-group title-field">
+	    <label class="control-label" for="evaluations__${num}__value">${eval.get('name')}</label>
+	    <div class="controls">
+	      <input id="evaluations__${num}__value" name="evaluations__${num}__value" type="text" value="${eval.get('value', '')}" />
+	    </div>
+	  </div>
+          <input id="evaluations__${num}__name" name="evaluations__${num}__name" type="hidden" value="${eval.get('name')}"/>
+          <input id="evaluations__${num}__uri" name="evaluations__${num}__uri" type="hidden" value="${eval.get('uri')}"/>
+          <input id="evaluations__${num}__category" name="evaluations__${num}__category" type="hidden" value="${eval.get('category')}"/>
+          <input id="evaluations__${num}__dataset_type" name="evaluations__${num}__dataset_type" type="hidden" value="${eval.get('dataset_type')}"/>
+    </py:for>
+  </py:with>
 </fieldset>
 
 <fieldset id='summary'>
