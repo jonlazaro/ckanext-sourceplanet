@@ -5,7 +5,7 @@ CKAN SourcePlanet Extension
 
 **CKAN Version:** 1.8
 
-The aim of SourcePlanet project is using CKAN for managing Open Source Software Projects' metadata. For that purpouse, SourcePlanet manages three entities identifying:
+The aim of `SourcePlanet project <http://dev.morelab.deusto.es/sourceplanet/>`_ is using CKAN for managing Open Source Software Projects' metadata. For that purpouse, SourcePlanet manages three entities identifying:
 
 - Open Source Projects (project)
 - Open Source Products (product)
@@ -22,3 +22,14 @@ This extension provides CKAN customization for SourcePlanet project with functio
 - Quality related info in project and producs.
 - New interface according to SourcePlanet needs.
 - Preliminar modification of RDF descriptions adapting them to software project descriptions (using `DOAP ontology <https://github.com/edumbill/doap>`_).
+
+Installation (not recommended)
+------------------------------
+
+To install this package, from your CKAN virtualenv, run the following from your CKAN base folder (e.g. ``pyenv/``)::
+
+  pip install -e git+https://github.com/jonlazaro/ckanext-sourceplanet#egg=ckanext-sourceplanet
+
+Then activate SourcePlanet extension (and also needed Organizations extension) by setting ``ckan.plugins = sourceplanet organizations`` in your main ``ini``-file.
+
+	At this moment, changes on CKAN default Package and Related controllers are required to make the extension work (not included by the moment)
